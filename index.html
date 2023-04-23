@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Decision Maker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1 class="text-3xl font-bold text-center my-8">My Decision Maker App</h1>
+
+        <div class="p-4 md:p-8">
+            <!-- Input Field -->
+            <div class="mb-4">
+                <label for="keyInput" class="block font-bold mb-2">Open AI key</label>
+                <input type="password" id="keyInput" v-model="keyInput" class="w-full border rounded py-2 px-3" :disabled="isLoading">
+            </div>
+
+            <div class="mb-4">
+                <label for="decisionInput" class="block font-bold mb-2">Enter your decision:</label>
+                <input type="text" id="decisionInput" v-model="decision" class="w-full border rounded py-2 px-3" @keyup.enter="makeDecision" :disabled="isLoading">
+            </div>
+
+            <!-- Make Decision Button (desktop) -->
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 mb-4 rounded md:block mx-auto"
+                    @click="makeDecision"
+            >
+                {{ isLoading ? 'Loading...' : 'Make Decision' }}
+            </button>
+
+            <div id="content">
+                <div class="bg-white rounded shadow-md mb-4 p-4">
+                    <h2 class="font-bold text-lg mb-2">Result:</h2>
+                    <p v-html="content"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    isLoading: false,
+                    userInput: '',
+                    keyInput: '',
+                    decision: '',
+                }
+            },
+            methods: {
+                handleEnter() {
+                    this.makeDecision();
+                },
+                handleClick() {
+                    this.makeDecision();
+                },
+                async makeDecision() {
+                    this.isLoading = true;
+
+                    const OPENAI_API_KEY = this.keyInput;
+                    const url = 'https://api.openai.com/v1/chat/completions';
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    };
+                    const data = {
+                        model: 'gpt-3.5-turbo',
+                        messages: [
+                            {
+                                role: 'user',
+                                content: `Your task is to provide a response that outlines the advantages and disadvantages of a given decision, along with a recommendation for how to proceed. Please ensure that your response follows the format provided below: Decision: [State the decision] Recommendation: [Provide a clear recommendation for how to proceed, such as consulting with experts or conducting further research before making a final decision] Pros: [List potential benefits of the decision, each in one sentence with title summarization.] Cons: [List potential drawbacks of the decision, each in one sentence with title summarization.] Please note that your response should be concise and focused on providing specific details and examples to support your points. Your recommendations and pros/cons should be tailored to the specific context of the decision at hand. ${this.userInput}. return in github markdown format, add double spaces between elements. Add emojis for each bullet point at the start. highlight titles in markdown`
+                            }
+                        ]
+                    };
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(data)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            this.isLoading = false;
+                            console.log(data.choices[0])
+                            return data.choices[0].message.content;
+                        })
+                        .catch(error => console.error(error));
+
+                    document.getElementById('content').innerHTML = marked.parse(response);
+                }
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
